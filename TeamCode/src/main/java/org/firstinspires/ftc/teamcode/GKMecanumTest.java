@@ -25,8 +25,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
  * 6. Πώς υπολογίζεται η ισχύς κάθε mecanum τροχού.
  *
  * Σημείωση:
- * Ο κώδικας είναι ο ίδιος με τον αρχικό. Έχουν προστεθεί μόνο
- * εκπαιδευτικά σχόλια στα Ελληνικά.
+ * Έχουν προστεθεί εκπαιδευτικά σχόλια στα Ελληνικά.
  * ============================================================================
  */
 @TeleOp(name = "Robot: Gavriil Karpathios Mecanum Drive Test", group = "Tests")
