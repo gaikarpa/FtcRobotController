@@ -13,13 +13,15 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 @TeleOp(name = "Robot: Gavriil Karpathios Mecanum Drive Test", group = "Tests")
 public class GKMecanumTest extends OpMode {
     // This declares the four motors needed
-    DcMotor frontLeftDrive;
-    DcMotor frontRightDrive;
-    DcMotor backLeftDrive;
-    DcMotor backRightDrive;
+    private DcMotor frontLeftDrive;
+    private DcMotor frontRightDrive;
+    private DcMotor backLeftDrive;
+    private DcMotor backRightDrive;
 
     // This declares the IMU needed to get the current direction the robot is facing
-    IMU imu;
+    private IMU imu;
+
+    private static final double MAX_SPEED = 1.0;
 
     @Override
     public void init() {
@@ -40,8 +42,15 @@ public class GKMecanumTest extends OpMode {
         // wires, you should remove these
         frontLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         frontRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         backLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        frontLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontRightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        backLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backRightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         imu = hardwareMap.get(IMU.class, "imu");
         // This needs to be changed to match the orientation on your robot
@@ -103,23 +112,31 @@ public class GKMecanumTest extends OpMode {
         double backRightPower = forward + right - rotate;
         double backLeftPower = forward - right + rotate;
 
+        telemetry.addData("Forward", forward);
+        telemetry.addData("Right", right);
+        telemetry.addData("Rotate", rotate);
+
         double maxPower = 1.0;
-        double maxSpeed = 1.0;  // make this slower for outreaches
 
         // This is needed to make sure we don't pass > 1.0 to any wheel
         // It allows us to keep all of the motors in proportion to what they should
         // be and not get clipped
-        maxPower = Math.max(maxPower, Math.abs(frontLeftPower));
-        maxPower = Math.max(maxPower, Math.abs(frontRightPower));
-        maxPower = Math.max(maxPower, Math.abs(backRightPower));
-        maxPower = Math.max(maxPower, Math.abs(backLeftPower));
+        maxPower = Math.max(MAX_SPEED, Math.abs(frontLeftPower));
+        maxPower = Math.max(MAX_SPEED, Math.abs(frontRightPower));
+        maxPower = Math.max(MAX_SPEED, Math.abs(backRightPower));
+        maxPower = Math.max(MAX_SPEED, Math.abs(backLeftPower));
+
+        telemetry.addData("FL", frontLeftPower);
+        telemetry.addData("FR", frontRightPower);
+        telemetry.addData("BL", backLeftPower);
+        telemetry.addData("BR", backRightPower);
 
         // We multiply by maxSpeed so that it can be set lower for outreaches
         // When a young child is driving the robot, we may not want to allow full
         // speed.
-        frontLeftDrive.setPower(maxSpeed * (frontLeftPower / maxPower));
-        frontRightDrive.setPower(maxSpeed * (frontRightPower / maxPower));
-        backLeftDrive.setPower(maxSpeed * (backLeftPower / maxPower));
-        backRightDrive.setPower(maxSpeed * (backRightPower / maxPower));
+        frontLeftDrive.setPower(MAX_SPEED * (frontLeftPower / maxPower));
+        frontRightDrive.setPower(MAX_SPEED * (frontRightPower / maxPower));
+        backLeftDrive.setPower(MAX_SPEED * (backLeftPower / maxPower));
+        backRightDrive.setPower(MAX_SPEED * (backRightPower / maxPower));
     }
 }
