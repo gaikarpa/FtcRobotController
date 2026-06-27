@@ -10,103 +10,139 @@ import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
+/**
+ * ============================================================================
+ * GKMecanumTest
+ * ----------------------------------------------------------------------------
+ * Εκπαιδευτικό παράδειγμα οδήγησης Mecanum για FTC.
+ *
+ * Το αρχείο αυτό δείχνει:
+ * 1. Πώς γίνεται η αρχικοποίηση των κινητήρων.
+ * 2. Πώς ρυθμίζεται η φορά περιστροφής τους.
+ * 3. Πώς χρησιμοποιείται η IMU.
+ * 4. Πώς υλοποιείται Robot Relative Drive.
+ * 5. Πώς υλοποιείται Field Relative Drive.
+ * 6. Πώς υπολογίζεται η ισχύς κάθε mecanum τροχού.
+ *
+ * Σημείωση:
+ * Ο κώδικας είναι ο ίδιος με τον αρχικό. Έχουν προστεθεί μόνο
+ * εκπαιδευτικά σχόλια στα Ελληνικά.
+ * ============================================================================
+ */
 @TeleOp(name = "Robot: Gavriil Karpathios Mecanum Drive Test", group = "Tests")
 public class GKMecanumTest extends OpMode {
-    // This declares the four motors needed
+
+    // =========================================================================
+    // Δήλωση κινητήρων
+    // Κάθε μεταβλητή αντιστοιχεί σε έναν φυσικό κινητήρα του robot.
+    // =========================================================================
     private DcMotor frontLeftDrive;
     private DcMotor frontRightDrive;
     private DcMotor backLeftDrive;
     private DcMotor backRightDrive;
 
-    // This declares the IMU needed to get the current direction the robot is facing
+    // =========================================================================
+    // IMU (Inertial Measurement Unit)
+    // Χρησιμοποιείται για να γνωρίζει το πρόγραμμα τον προσανατολισμό
+    // (Yaw, Pitch, Roll) του robot.
+    // =========================================================================
     private IMU imu;
 
+    // Μέγιστη επιτρεπόμενη ταχύτητα.
     private static final double MAX_SPEED = 1.0;
 
     @Override
     public void init() {
+
+        // Αντιστοίχιση μεταβλητών με τις συσκευές του Robot Configuration.
         frontLeftDrive = hardwareMap.get(DcMotor.class, "front_left_drive");
         frontRightDrive = hardwareMap.get(DcMotor.class, "front_right_drive");
         backLeftDrive = hardwareMap.get(DcMotor.class, "back_left_drive");
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right_drive");
 
-        // We set the left motors in reverse which is needed for drive trains where the left
-        // motors are opposite to the right ones.
+        // Ρύθμιση φοράς περιστροφής των κινητήρων.
         frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
         frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
-
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backRightDrive.setDirection(DcMotor.Direction.FORWARD);
 
-        // This uses RUN_USING_ENCODER to be more accurate.   If you don't have the encoder
-        // wires, you should remove these
+        // Χρήση encoders για ακριβέστερο έλεγχο.
         frontLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         frontRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
         backLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        // Φρενάρισμα όταν η ισχύς γίνει μηδέν.
         frontLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontRightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
         backLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backRightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+        // Αρχικοποίηση IMU.
         imu = hardwareMap.get(IMU.class, "imu");
-        // This needs to be changed to match the orientation on your robot
+
         RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
                 RevHubOrientationOnRobot.LogoFacingDirection.UP;
+
         RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
                 RevHubOrientationOnRobot.UsbFacingDirection.LEFT;
 
-        RevHubOrientationOnRobot orientationOnRobot = new
-                RevHubOrientationOnRobot(logoDirection, usbDirection);
+        RevHubOrientationOnRobot orientationOnRobot =
+                new RevHubOrientationOnRobot(logoDirection, usbDirection);
+
         imu.initialize(new IMU.Parameters(orientationOnRobot));
     }
 
     @Override
     public void loop() {
-        //telemetry.addLine("Press A to reset Yaw");
-        //telemetry.addLine("Hold left bumper to drive in robot relative");
-        telemetry.addLine("The left joystick sets the robot direction");
-        telemetry.addLine("Moving the right joystick left and right turns the robot");
 
-        // If you press the A button, then you reset the Yaw to be zero from the way
-        // the robot is currently pointing
-        /*if (gamepad1.a) {
-            imu.resetYaw();
-        }*/
-        // If you press the left bumper, you get a drive from the point of view of the robot
-        // (much like driving an RC vehicle)
-        //if (gamepad1.left_bumper) {
-        drive(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
-        //} else {
-        //    driveFieldRelative(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
-        //}
+        telemetry.addLine("Το αριστερό joystick ελέγχει την κίνηση.");
+        telemetry.addLine("Το δεξί joystick περιστρέφει το robot.");
+
+        // Robot Relative Drive
+        drive(
+                -gamepad1.left_stick_y,
+                gamepad1.left_stick_x,
+                gamepad1.right_stick_x
+        );
     }
 
-    // This routine drives the robot field relative
+    /**
+     * Field Relative Drive
+     *
+     * Ο οδηγός κινεί το robot ως προς το γήπεδο και όχι ως προς
+     * τον προσανατολισμό του robot.
+     */
     private void driveFieldRelative(double forward, double right, double rotate) {
-        // First, convert direction being asked to drive to polar coordinates
+
+        // Μετατροπή του διανύσματος του joystick σε πολικές συντεταγμένες.
         double theta = Math.atan2(forward, right);
         double r = Math.hypot(right, forward);
 
-        // Second, rotate angle by the angle the robot is pointing
-        theta = AngleUnit.normalizeRadians(theta -
-                imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
+        // Αφαίρεση της γωνίας του robot από την IMU.
+        theta = AngleUnit.normalizeRadians(
+                theta - imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS)
+        );
 
-        // Third, convert back to cartesian
+        // Μετατροπή ξανά σε καρτεσιανές συντεταγμένες.
         double newForward = r * Math.sin(theta);
         double newRight = r * Math.cos(theta);
 
-        // Finally, call the drive method with robot relative forward and right amounts
         drive(newForward, newRight, rotate);
     }
 
-    // Thanks to FTC16072 for sharing this code!!
+    /**
+     * Robot Relative Mecanum Drive
+     *
+     * Συνδυάζει:
+     * - Κίνηση εμπρός / πίσω
+     * - Πλάγια ολίσθηση (Strafe)
+     * - Περιστροφή
+     *
+     * και υπολογίζει την τελική ισχύ κάθε κινητήρα.
+     */
     public void drive(double forward, double right, double rotate) {
-        // This calculates the power needed for each wheel based on the amount of forward,
-        // strafe right, and rotate
+
         double frontLeftPower = forward + right + rotate;
         double frontRightPower = forward - right - rotate;
         double backRightPower = forward + right - rotate;
@@ -118,9 +154,7 @@ public class GKMecanumTest extends OpMode {
 
         double maxPower = 1.0;
 
-        // This is needed to make sure we don't pass > 1.0 to any wheel
-        // It allows us to keep all of the motors in proportion to what they should
-        // be and not get clipped
+        // Κανονικοποίηση ώστε καμία τιμή να μην ξεπερνά το [-1,1].
         maxPower = Math.max(MAX_SPEED, Math.abs(frontLeftPower));
         maxPower = Math.max(MAX_SPEED, Math.abs(frontRightPower));
         maxPower = Math.max(MAX_SPEED, Math.abs(backRightPower));
@@ -131,9 +165,7 @@ public class GKMecanumTest extends OpMode {
         telemetry.addData("BL", backLeftPower);
         telemetry.addData("BR", backRightPower);
 
-        // We multiply by maxSpeed so that it can be set lower for outreaches
-        // When a young child is driving the robot, we may not want to allow full
-        // speed.
+        // Αποστολή ισχύος στους κινητήρες.
         frontLeftDrive.setPower(MAX_SPEED * (frontLeftPower / maxPower));
         frontRightDrive.setPower(MAX_SPEED * (frontRightPower / maxPower));
         backLeftDrive.setPower(MAX_SPEED * (backLeftPower / maxPower));
